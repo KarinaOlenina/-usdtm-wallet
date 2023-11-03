@@ -1,17 +1,21 @@
-import React, {useEffect, useState} from "react";
-import {ChakraProvider, Box, Grid, theme, chakra, Text} from "@chakra-ui/react";
-import ConnectWalletButton from "./Components/ConnectWallet";
-import Account from "./Components/Account";
-import Balance from "./Components/Balance";
-import Mint from "./Components/Mint";
-import {ethers, JsonRpcSigner, parseEther} from "ethers";
-import USDTM_ABI from '../src/abi/token-abi.json';
-import SendTransactionModal from "./Components/SendTransactionModal/SendTransactionModal";
+import { Box, chakra, ChakraProvider, Grid, theme } from '@chakra-ui/react';
+// eslint-disable-next-line no-restricted-imports
+import { ethers, parseEther } from 'ethers';
+import React, { useEffect, useState } from 'react';
 
+import USDTM_ABI from '../src/abi/token-abi.json';
+import Account from './Components/Account';
+import Balance from './Components/Balance';
+import ConnectWalletButton from './Components/ConnectWallet';
+import Mint from './Components/Mint';
+import SendTransactionModal from './Components/SendTransactionModal/SendTransactionModal';
+import StyledText from './Components/StyledText/StyledText';
+import { connectWallet } from './utils';
 
 const AppWrapper = chakra(Box, {
   baseStyle: {
-    background: 'linear-gradient(180deg, rgba(63,81,184,0.896796218487395) 0%, rgba(194,79,182,0.8995973389355743) 100%)',
+    background:
+      'linear-gradient(180deg, rgba(63,81,184,0.896796218487395) 0%, rgba(194,79,182,0.8995973389355743) 100%)',
   },
 });
 
@@ -31,56 +35,42 @@ const ModalWrapper = chakra(Box, {
 });
 
 const App: React.FC = () => {
-  const [account, setAccount] = useState<JsonRpcSigner | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
-  const [contract, setContract] = useState< ethers.Contract | null>(null);
-  const [signer, setSigner] = useState< ethers.JsonRpcSigner | null>(null);
-  const [tokenSymbol, setTokenSymbol] = useState<string>("TokenSymbol");
+  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [tokenSymbol, setTokenSymbol] = useState<string>('TokenSymbol');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isTransactionModalOpen, setTransactionModalOpen] = useState<boolean>(false);
+  const [isTransactionModalOpen, setTransactionModalOpen] =
+    useState<boolean>(false);
   const [connecting, setConnecting] = useState(false);
 
-  const connectWalletHandler = async () => {
-    setConnecting(true);
-    if ((window as any).ethereum && (window as any).ethereum.isMetaMask) {
-      try {
-        setErrorMessage(null);
-        const addressArray = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
-        const newAddress = addressArray[0];
-        localStorage.setItem("userAccount", newAddress);
-        changeAccountHandler(newAddress);
-
-        (window as any).ethereum.on("accountsChanged", (accounts: string[]) => {
-          if (accounts.length === 0) {
-            changeAccountHandler(null);
-            localStorage.removeItem("userAccount");
-          }
-        });
-      } catch (err: any) {
-        setErrorMessage("😥 " + err.message);
-      } finally {
-        setConnecting(false);
-      }
-    } else {
-      setErrorMessage(" You must install MetaMask, a virtual Ethereum wallet, in your browser 🦊.");
-    }
+  const handleConnectWallet = (): void => {
+    connectWallet(
+      setAccount,
+      setErrorMessage,
+      setConnecting,
+      changeAccountHandler
+    );
   };
 
-  (window as any).ethereum.on("disconnect", (error: any) => {
-    changeAccountHandler(null);
-    localStorage.removeItem("userAccount");
-  });
-
-  const changeAccountHandler = (newAddress: any) => {
+  const changeAccountHandler = (newAddress: any): void => {
     setAccount(newAddress);
     updateEthers();
   };
 
-  const updateEthers = async () => {
+  useEffect(() => {
+    const storedAccount = localStorage.getItem('userAccount');
+    if (storedAccount) {
+      setAccount(storedAccount);
+    }
+  }, [account]);
+
+  const updateEthers = async (): Promise<void> => {
     const provider = new ethers.BrowserProvider((window as any).ethereum);
     const signer = await provider.getSigner();
 
-    const tokenContractAddress = process.env.REACT_APP_DEV_TOKEN_CONTRACT_ADDRESS;
+    const tokenContractAddress =
+      process.env.REACT_APP_DEV_TOKEN_CONTRACT_ADDRESS;
 
     let contract;
 
@@ -88,12 +78,18 @@ const App: React.FC = () => {
       contract = new ethers.Contract(tokenContractAddress, USDTM_ABI, signer);
       setContract(contract);
     } else {
-      setErrorMessage("😥 The contract address was not found ")
+      setErrorMessage('😥 The contract address was not found ');
     }
+  };
 
-    setSigner(signer);
-  }
+  const updateBalance = async (): Promise<void> => {
+    const balanceBigN = await contract?.balanceOf(account);
+    setBalance(Number(ethers.formatEther(balanceBigN)));
+  };
 
+  const updateTokenSymbol = async (): Promise<void> => {
+    setTokenSymbol(await contract?.symbol());
+  };
 
   useEffect(() => {
     if (contract != null) {
@@ -102,19 +98,9 @@ const App: React.FC = () => {
     }
   }, [contract]);
 
-
-  const updateBalance = async () => {
-    let balanceBigN = await contract?.balanceOf(account);
-    setBalance(Number(ethers.formatEther(balanceBigN)));
-  };
-
-  const updateTokenSymbol = async () => {
-    setTokenSymbol(await contract?.symbol())
-  };
-
-  const handleMint = async (mintAmount: string) => {
+  const handleMint = async (mintAmount: string): Promise<void> => {
     if (+mintAmount === 0) {
-      setErrorMessage("😐 Please enter the desired amount");
+      setErrorMessage('😐 Please enter the desired amount');
       return;
     } else {
       setErrorMessage(null);
@@ -126,47 +112,66 @@ const App: React.FC = () => {
       const receipt = await tx.wait();
 
       if (receipt.status === 0) {
-        setErrorMessage("😢 The transaction was canceled by the user");
+        setErrorMessage('😢 The transaction was canceled by the user');
       } else {
         setErrorMessage(null);
-        updateBalance();
+        await updateBalance();
       }
     } catch (error) {
-      setErrorMessage("😢 An error occurred while sending the transaction");
+      setErrorMessage('😢 An error occurred while sending the transaction');
     } finally {
       setTransactionModalOpen(false);
     }
   };
 
   return (
-      <ChakraProvider theme={theme}>
-        <AppWrapper textAlign="center" fontSize="xl">
-          <Grid minH="100vh" p={3}>
-            {!account ? (
-                    <ModalWrapper justifyContent={'center'} alignItems={'center'}>
-                      <ConnectWalletButton onConnectClick={connectWalletHandler} />
-                      {connecting && (
-                              <Text height={'20px'} color={"gray.300"} fontSize={'14px'}>Confirm connection in MetaMask...</Text>
-                          )}
-                      {errorMessage && (
-                              <Text height={'20px'} color={"red.300"} fontSize={'14px'}>{errorMessage}</Text>
-                          )}
-                    </ModalWrapper>
-            ) : (
-                <ModalWrapper>
-                  <Account account={account} />
-                  <Balance balance={balance} symbol={tokenSymbol} />
-                  {errorMessage ? (
-                      <Text height={'20px'} color={"red.300"} fontSize={'14px'}>{errorMessage}</Text>
-                  )
-                  : (<Text height={'20px'} fontSize={'14px'}/>)}
-                  <Mint onMintClick={handleMint} />
-                </ModalWrapper>
-            )}
-          </Grid>
-          <SendTransactionModal isOpen={isTransactionModalOpen} onClose={() => setTransactionModalOpen(false)} />
-        </AppWrapper>
-      </ChakraProvider>
+    <ChakraProvider theme={theme}>
+      <AppWrapper textAlign="center" fontSize="xl">
+        <Grid minH="100vh" p={3}>
+          {!account ? (
+            <ModalWrapper justifyContent={'center'} alignItems={'center'}>
+              <ConnectWalletButton onConnectClick={handleConnectWallet} />
+              {connecting && (
+                <StyledText
+                  height={'20px'}
+                  color={'gray.300'}
+                  fontSize={'14px'}
+                  text={'Confirm connection in MetaMask...'}
+                />
+              )}
+              {errorMessage && (
+                <StyledText
+                  height={'20px'}
+                  color={'red.300'}
+                  fontSize={'14px'}
+                  text={errorMessage}
+                />
+              )}
+            </ModalWrapper>
+          ) : (
+            <ModalWrapper>
+              <Account account={account} />
+              <Balance balance={balance} symbol={tokenSymbol} />
+              {errorMessage ? (
+                <StyledText
+                  height="20px"
+                  color="red.300"
+                  fontSize="14px"
+                  text={errorMessage}
+                />
+              ) : (
+                <StyledText height={'20px'} fontSize={'14px'} text={''} />
+              )}
+              <Mint onMintClick={handleMint} />
+            </ModalWrapper>
+          )}
+        </Grid>
+        <SendTransactionModal
+          isOpen={isTransactionModalOpen}
+          onClose={() => setTransactionModalOpen(false)}
+        />
+      </AppWrapper>
+    </ChakraProvider>
   );
 };
 
