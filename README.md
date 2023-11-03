@@ -33,6 +33,8 @@ yarn start
 
 The app will be accessible at http://localhost:3000 in your web browser.
 
+![img.png](src/assets/img.png)
+
 ## 🤐 .env File
 
 Make sure to create a .env file in the project root directory with the following environment variable:

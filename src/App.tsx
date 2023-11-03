@@ -10,7 +10,7 @@ import ConnectWalletButton from './Components/ConnectWallet';
 import Mint from './Components/Mint';
 import SendTransactionModal from './Components/SendTransactionModal/SendTransactionModal';
 import StyledText from './Components/StyledText/StyledText';
-import { connectWallet } from './utils';
+import { connectWallet, getBalance, getTokenSymbol } from './utils';
 
 const AppWrapper = chakra(Box, {
   baseStyle: {
@@ -58,12 +58,17 @@ const App: React.FC = () => {
     updateContract();
   };
 
-  useEffect(() => {
-    const storedAccount = localStorage.getItem('userAccount');
-    if (storedAccount) {
-      setAccount(storedAccount);
+  const removeStoredAccount = (): void => {
+    localStorage.removeItem('userAccount');
+  };
+
+  (window as any).ethereum.on('accountsChanged', (accounts: string[]) => {
+    if (accounts.length === 0) {
+      console.log('disconnect');
+      setAccount(null);
+      removeStoredAccount();
     }
-  }, [account]);
+  });
 
   const updateContract = async (): Promise<void> => {
     try {
@@ -88,22 +93,17 @@ const App: React.FC = () => {
     }
   };
 
-  const updateBalance = async (): Promise<void> => {
-    const balanceBigN = await contract?.balanceOf(account);
-    setBalance(Number(ethers.formatEther(balanceBigN)));
-  };
-
-  const updateTokenSymbol = async (): Promise<void> => {
-    setTokenSymbol(await contract?.symbol());
-  };
-
-  useEffect(() => {
-    if (contract != null) {
-      updateBalance();
-      updateTokenSymbol();
+  const updateBalanceHandler = async (): Promise<void> => {
+    if (contract != null && account) {
+      await getBalance(contract, account, setBalance);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contract]);
+  };
+
+  const updateTokenSymbolHandler = async (): Promise<void> => {
+    if (contract != null) {
+      await getTokenSymbol(contract, setTokenSymbol);
+    }
+  };
 
   const handleMint = async (mintAmount: string): Promise<void> => {
     if (+mintAmount === 0) {
@@ -122,7 +122,7 @@ const App: React.FC = () => {
         setErrorMessage('😢 The transaction was canceled by the user');
       } else {
         setErrorMessage(null);
-        await updateBalance();
+        await updateBalanceHandler();
       }
     } catch (error) {
       setErrorMessage('😢 An error occurred while sending the transaction');
@@ -130,6 +130,25 @@ const App: React.FC = () => {
       setTransactionModalOpen(false);
     }
   };
+
+  useEffect(() => {
+    const storedAccount = localStorage.getItem('userAccount');
+    if (storedAccount) {
+      setAccount(storedAccount);
+    }
+  }, [account]);
+
+  useEffect(() => {
+    account && updateContract();
+  }, [account]);
+
+  useEffect(() => {
+    if (contract != null) {
+      updateBalanceHandler();
+      updateTokenSymbolHandler();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contract]);
 
   return (
     <ChakraProvider theme={theme}>
