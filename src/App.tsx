@@ -55,7 +55,7 @@ const App: React.FC = () => {
 
   const changeAccountHandler = (newAddress: any): void => {
     setAccount(newAddress);
-    updateEthers();
+    updateContract();
   };
 
   useEffect(() => {
@@ -65,20 +65,26 @@ const App: React.FC = () => {
     }
   }, [account]);
 
-  const updateEthers = async (): Promise<void> => {
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
-    const signer = await provider.getSigner();
+  const updateContract = async (): Promise<void> => {
+    try {
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
 
-    const tokenContractAddress =
-      process.env.REACT_APP_DEV_TOKEN_CONTRACT_ADDRESS;
+      const tokenContractAddress =
+        process.env.REACT_APP_DEV_TOKEN_CONTRACT_ADDRESS;
 
-    let contract;
+      let contract;
 
-    if (tokenContractAddress) {
-      contract = new ethers.Contract(tokenContractAddress, USDTM_ABI, signer);
-      setContract(contract);
-    } else {
-      setErrorMessage('😥 The contract address was not found ');
+      if (tokenContractAddress) {
+        contract = new ethers.Contract(tokenContractAddress, USDTM_ABI, signer);
+        setContract(contract);
+      } else {
+        setErrorMessage('😥 The contract address was not found');
+      }
+    } catch (error: any) {
+      setErrorMessage(
+        `😢 An error occurred while getting the signer: ${error.message}`
+      );
     }
   };
 
@@ -96,6 +102,7 @@ const App: React.FC = () => {
       updateBalance();
       updateTokenSymbol();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contract]);
 
   const handleMint = async (mintAmount: string): Promise<void> => {

@@ -1,5 +1,6 @@
 import { Box, chakra, Text } from '@chakra-ui/react';
 import React from 'react';
+
 import StyledText from '../StyledText/StyledText';
 
 interface BalanceProps {

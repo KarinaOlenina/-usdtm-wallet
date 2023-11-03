@@ -42,6 +42,19 @@ REACT_APP_DEV_TOKEN_CONTRACT_ADDRESS=
 ```
 This environment variable is used to specify the development token contract address.
 
+
+## 🌐 MetaMask Network Configuration
+
+Before using the application, make sure to configure the MetaMask network settings to connect to the Polygon Mumbai testnet with the following details:
+```bash
+Network Name: Polygon Mumbai Testnet
+New RPC URL: https://endpoints.omniatech.io/v1/matic/mumbai/public
+Chain ID: 80001
+Currency Symbol: MATIC
+```
+These settings will allow you to connect to the Polygon Mumbai testnet and use the application with the specified RPC endpoint and network configuration.
+
+
 ## 🧑‍💻 Testing
 
 You can run tests using the following command:
