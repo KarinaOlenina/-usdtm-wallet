@@ -13,8 +13,17 @@
     "@types/node": "^12.0.0",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.4",
+    "eslint": "^8.43.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "eslint-plugin-unused-imports": "^2.0.0",
     "ethers": "^6.8.0",
     "framer-motion": "^6.2.9",
+    "prettier": "^3.0.3",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-icons": "^3.0.0",
@@ -23,13 +32,24 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "C:\\Users\\uaole\\WebstormProjects\\usdtm-wallet/node_modules/.bin/react-scripts start",
+    "start": "node_modules/.bin/react-scripts start",
     "build": "usdtm-wallet/node_modules/.bin/react-scripts build",
     "test": "usdtm-wallet/node_modules/.bin/react-scripts test",
-    "eject": "usdtm-wallet/node_modules/.bin/react-scripts eject"
+    "eject": "usdtm-wallet/node_modules/.bin/react-scripts eject",
+    "lint": "eslint \"src/**/*{.ts,.tsx}\"",
+    "lint:fix": "eslint \"src/**/*{.ts,.tsx}\" --fix",
+    "prettier": "prettier --write ."
+  },
+  "lint-staged": {
+    "*.{js,json,css,md,ts,tsx,html,component.html}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app"
+    ]
   },
   "browserslist": {
     "production": [
